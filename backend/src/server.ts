@@ -56,39 +56,6 @@ interface Lead {
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "leads.json");
 
-const MOCK_LEADS: Lead[] = [
-  {
-    id: 1,
-    name: "Rohit Sharma",
-    company: "Infosys",
-    baseScore: 92,
-    status: "Hot",
-    lastContactDate: new Date(Date.now() - 2 * 86400000).toISOString(),
-    promises: ["Send proposal by Friday", "Schedule product demo"],
-    conversationHistory: ["Called Rohit, he loved the product. Budget approved. Needs proposal ASAP."],
-  },
-  {
-    id: 2,
-    name: "Priya Menon",
-    company: "Flipkart",
-    baseScore: 68,
-    status: "Warm",
-    lastContactDate: new Date(Date.now() - 5 * 86400000).toISOString(),
-    promises: ["Send case study", "Follow up next week"],
-    conversationHistory: ["Priya is interested but needs approval from her manager. Send case study."],
-  },
-  {
-    id: 3,
-    name: "Aman Gupta",
-    company: "Zomato",
-    baseScore: 35,
-    status: "Cold",
-    lastContactDate: new Date(Date.now() - 10 * 86400000).toISOString(),
-    promises: ["Check back in Q2"],
-    conversationHistory: ["Aman said budget is frozen until Q2. Low priority for now."],
-  },
-];
-
 function loadLeads(): Lead[] {
   try {
     if (fs.existsSync(DATA_FILE)) {
@@ -96,11 +63,9 @@ function loadLeads(): Lead[] {
       return JSON.parse(raw) as Lead[];
     }
   } catch (err) {
-    console.warn("⚠️  Could not read leads.json, falling back to mock data:", err);
+    console.warn("⚠️  Could not read leads.json:", err);
   }
-  // First run — seed with mock data and persist immediately
-  saveLeads(MOCK_LEADS);
-  return MOCK_LEADS;
+  return [];
 }
 
 function saveLeads(data: Lead[]): void {
