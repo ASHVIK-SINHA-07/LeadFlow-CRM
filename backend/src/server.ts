@@ -53,7 +53,7 @@ interface Lead {
 }
 
 // -- Database
-const DATA_DIR = path.join(process.cwd(), "data");
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "leads.json");
 
 const MOCK_LEADS: Lead[] = [
@@ -774,4 +774,5 @@ Rules:
     res.json({ results, explanation: `Found ${results.length} lead(s) matching "${query}"`, query });
   }
 });
-app.listen(3001, () => console.log("✅ Server running on http://localhost:3001"));
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
