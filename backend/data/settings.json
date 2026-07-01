@@ -1,0 +1,5 @@
+{
+  "decayRate": 6,
+  "thresholdHot": 80,
+  "thresholdWarm": 26
+}
