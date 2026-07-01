@@ -739,5 +739,18 @@ Rules:
     res.json({ results, explanation: `Found ${results.length} lead(s) matching "${query}"`, query });
   }
 });
+app.delete("/api/reset", (req, res) => {
+  const secret = req.query.secret;
+  const expectedSecret = process.env.RESET_SECRET;
+
+  if (!expectedSecret || secret !== expectedSecret) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  leads = [];
+  saveLeads(leads);
+  res.json({ message: "Leads database reset successfully" });
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
