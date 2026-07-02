@@ -12,5 +12,12 @@
     "email": "test_register@leadflow.com",
     "password": "$2b$10$xgjv5yR0q4JwQZij8t.Hpu9YjoxKvJg6qdGV638.1SOiZhHKEs.Di",
     "createdAt": "2026-07-02T08:11:43.531Z"
+  },
+  {
+    "id": 3,
+    "name": "Ashvik Sinha",
+    "email": "ashviksinha3001@gmail.com",
+    "password": "$2b$10$uSrMK3HegwYAaNTJhpbckOwCRPAFF3lKZ.rLf2m10lSoCRkGPwq.y",
+    "createdAt": "2026-07-02T08:25:43.701Z"
   }
 ]

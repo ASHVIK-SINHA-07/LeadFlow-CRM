@@ -12,6 +12,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.json({ status: "ok", message: "LeadFlow CRM Backend API is active and running!" });
+});
+
 // -- Lemma Config
 const LEMMA_API_URL = process.env.LEMMA_API_URL || "https://api.lemma.work";
 const LEMMA_POD_ID = process.env.LEMMA_POD_ID;
