@@ -1,6 +1,18 @@
+import { useState, useEffect } from 'react'
 import { Zap, Brain, Mail, TrendingDown } from 'lucide-react'
+import { getDashboard } from '../services/api'
 
-const agents = [
+interface Agent {
+  id: number
+  name: string
+  description: string
+  status: string
+  color: string
+  icon: any
+  getStats: (stats: { totalLeads: number; openPromises: number; overdueFollowUps: number }) => string
+}
+
+const agents: Agent[] = [
   {
     id: 1,
     name: 'Memory Agent',
@@ -8,7 +20,7 @@ const agents = [
     status: 'Active',
     color: '#5E6AD2',
     icon: Brain,
-    stats: 'Tracking 3 leads • 6 open promises',
+    getStats: (stats) => `Tracking ${stats.totalLeads} lead${stats.totalLeads !== 1 ? 's' : ''} • ${stats.openPromises} open promise${stats.openPromises !== 1 ? 's' : ''}`,
   },
   {
     id: 2,
@@ -17,7 +29,7 @@ const agents = [
     status: 'Active',
     color: '#F59E0B',
     icon: TrendingDown,
-    stats: '2 leads overdue today',
+    getStats: (stats) => `${stats.overdueFollowUps} lead${stats.overdueFollowUps !== 1 ? 's' : ''} overdue today`,
   },
   {
     id: 3,
@@ -26,7 +38,7 @@ const agents = [
     status: 'Active',
     color: '#5E6AD2',
     icon: Mail,
-    stats: '1-click drafts ready',
+    getStats: (stats) => stats.totalLeads > 0 ? '1-click drafts ready' : 'No active drafts',
   },
   {
     id: 4,
@@ -35,11 +47,25 @@ const agents = [
     status: 'Active',
     color: '#22C55E',
     icon: Zap,
-    stats: 'Upload a transcript to activate',
+    getStats: (stats) => stats.totalLeads > 0 ? `${stats.totalLeads} lead${stats.totalLeads !== 1 ? 's' : ''} analyzed` : 'Upload a transcript to activate',
   },
 ]
 
 export default function AIAgents() {
+  const [stats, setStats] = useState({ totalLeads: 0, openPromises: 0, overdueFollowUps: 0 })
+
+  useEffect(() => {
+    getDashboard()
+      .then(data => {
+        setStats({
+          totalLeads: data.totalLeads ?? 0,
+          openPromises: data.openPromises ?? 0,
+          overdueFollowUps: data.overdueFollowUps ?? 0,
+        })
+      })
+      .catch(err => console.error("Error loading agent stats:", err))
+  }, [])
+
   return (
     <div style={{ padding: '40px 40px 60px 280px', minHeight: '100vh', position: 'relative', zIndex: 10 }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -88,7 +114,7 @@ export default function AIAgents() {
                   borderRadius: 6, padding: '8px 12px',
                   fontWeight: 500,
                 }}>
-                  ↳ {agent.stats}
+                  ↳ {agent.getStats(stats)}
                 </div>
               </div>
             )
