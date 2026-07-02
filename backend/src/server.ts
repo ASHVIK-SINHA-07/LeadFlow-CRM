@@ -86,11 +86,10 @@ function loadUsers(): User[] {
 function saveUsers(data: User[]): void {
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    const tempFile = path.join(DATA_DIR, `users.tmp.${Date.now()}`);
-    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), "utf-8");
-    fs.renameSync(tempFile, USERS_FILE);
+    fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2), "utf-8");
   } catch (err) {
     console.error("❌ Failed to save users.json:", err);
+    throw err;
   }
 }
 
@@ -112,12 +111,10 @@ function loadLeads(): Lead[] {
 function saveLeads(data: Lead[]): void {
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    // Atomic write: write to temp file first, then swap
-    const tempFile = path.join(DATA_DIR, `leads.tmp.${Date.now()}`);
-    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), "utf-8");
-    fs.renameSync(tempFile, DATA_FILE);
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
   } catch (err) {
     console.error("❌ Failed to save leads.json:", err);
+    throw err;
   }
 }
 

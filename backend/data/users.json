@@ -19,5 +19,19 @@
     "email": "ashviksinha3001@gmail.com",
     "password": "$2b$10$uSrMK3HegwYAaNTJhpbckOwCRPAFF3lKZ.rLf2m10lSoCRkGPwq.y",
     "createdAt": "2026-07-02T08:25:43.701Z"
+  },
+  {
+    "id": 4,
+    "name": "Ashvik Dev",
+    "email": "ashviksinha.dev@gmail.com",
+    "password": "$2b$10$k903XiRq7rLIxvHeZIyIzen4I81erFNzVmqzReRKK4o6Hq5csTVuO",
+    "createdAt": "2026-07-02T14:32:19.105Z"
+  },
+  {
+    "id": 5,
+    "name": "Ashvik Test",
+    "email": "ashvik_test_unique_999@gmail.com",
+    "password": "$2b$10$Rtpg/V8ZpEzvXtd8XfF7mOjQavjzzyy/UGH/TYmFU83XjT1PuNE3u",
+    "createdAt": "2026-07-02T14:33:49.071Z"
   }
 ]
