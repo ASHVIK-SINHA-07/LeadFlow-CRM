@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -36,6 +38,14 @@ async function verifyLemmaConnection(): Promise<void> {
 verifyLemmaConnection();
 
 // -- Data Types
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  password: string; // hashed password
+  createdAt: string;
+}
+
 interface Lead {
   id: number;
   name: string;
@@ -55,6 +65,33 @@ interface Lead {
 // -- Database
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "leads.json");
+const USERS_FILE = path.join(DATA_DIR, "users.json");
+
+function loadUsers(): User[] {
+  try {
+    if (fs.existsSync(USERS_FILE)) {
+      const raw = fs.readFileSync(USERS_FILE, "utf-8");
+      return JSON.parse(raw) as User[];
+    }
+  } catch (err) {
+    console.warn("⚠️  Could not read users.json:", err);
+  }
+  return [];
+}
+
+function saveUsers(data: User[]): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    const tempFile = path.join(DATA_DIR, `users.tmp.${Date.now()}`);
+    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), "utf-8");
+    fs.renameSync(tempFile, USERS_FILE);
+  } catch (err) {
+    console.error("❌ Failed to save users.json:", err);
+  }
+}
+
+let users: User[] = loadUsers();
+const activeTokens = new Map<string, number>(); // Map<token, userId>
 
 function loadLeads(): Lead[] {
   try {
@@ -223,6 +260,104 @@ async function runLemmaAgent(agentName: string, promptText: string): Promise<str
     return callAI(promptText);
   }
 }
+
+// -- Authentication Middleware
+function requireAuth(req: any, res: any, next: any) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized: Missing token" });
+  }
+  const token = authHeader.split(" ")[1];
+  const userId = activeTokens.get(token);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
+  }
+  req.userId = userId;
+  req.user = users.find((u) => u.id === userId);
+  next();
+}
+
+// -- Auth Endpoints
+app.post("/api/auth/register", async (req, res) => {
+  const { name, email, password } = req.body;
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  users = loadUsers();
+
+  if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
+    return res.status(400).json({ error: "Email already registered" });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser: User = {
+      id: users.length === 0 ? 1 : Math.max(...users.map((u) => u.id)) + 1,
+      name,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      createdAt: new Date().toISOString(),
+    };
+
+    users.push(newUser);
+    saveUsers(users);
+
+    res.status(201).json({
+      success: true,
+      user: { id: newUser.id, name: newUser.name, email: newUser.email },
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Registration failed" });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: "Missing email or password" });
+  }
+
+  users = loadUsers();
+  const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+
+  if (!user) {
+    return res.status(401).json({ error: "Invalid email or password" });
+  }
+
+  try {
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    const token = crypto.randomUUID();
+    activeTokens.set(token, user.id);
+
+    res.json({
+      success: true,
+      token,
+      user: { id: user.id, name: user.name, email: user.email },
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+
+app.get("/api/auth/me", requireAuth, (req: any, res) => {
+  res.json({ success: true, user: { id: req.user.id, name: req.user.name, email: req.user.email } });
+});
+
+// Protect all CRM endpoints
+app.use("/api/leads", requireAuth);
+app.use("/api/dashboard", requireAuth);
+app.use("/api/analyze", requireAuth);
+app.use("/api/draft-followup", requireAuth);
+app.use("/api/archive", requireAuth);
+app.use("/api/alerts", requireAuth);
+app.use("/api/search", requireAuth);
+app.use("/api/settings", requireAuth);
+app.use("/api/reset", requireAuth);
 
 // -- Routes
 

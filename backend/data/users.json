@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "name": "Test User",
+    "email": "test@leadflow.com",
+    "password": "$2b$10$oKY5r0z1cjCRSlJCrrgM5.pFwmqzlsB3y8wmdpuewaRFmfmHXT/k6",
+    "createdAt": "2026-07-02T08:05:47.710Z"
+  },
+  {
+    "id": 2,
+    "name": "Test User",
+    "email": "test_register@leadflow.com",
+    "password": "$2b$10$xgjv5yR0q4JwQZij8t.Hpu9YjoxKvJg6qdGV638.1SOiZhHKEs.Di",
+    "createdAt": "2026-07-02T08:11:43.531Z"
+  }
+]

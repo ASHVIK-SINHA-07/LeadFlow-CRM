@@ -13,8 +13,11 @@ import Brief from './pages/Brief'
 import Alerts from './pages/Alerts'
 import ArchivePage from './pages/Archive'
 import Settings from './pages/Settings'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import LoginPage from './pages/LoginPage'
 
-export default function App() {
+function AppContent() {
+  const { isAuthenticated, loading } = useAuth()
   const [loaded, setLoaded] = useState(false)
   const [cmdOpen, setCmdOpen] = useState(false)
 
@@ -29,32 +32,47 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  return (
-    <BrowserRouter>
-      <div style={{ position: 'relative', minHeight: '100vh', background: '#0F1015' }}>
-        <Background />
-        {!loaded && <LoadingScreen onComplete={() => setLoaded(true)} />}
-        {loaded && (
-          <>
-            <Sidebar />
-            <main>
-              <Routes>
-                <Route path="/"          element={<Dashboard />} />
-                <Route path="/leads"     element={<Leads />} />
-                <Route path="/upload"    element={<Upload />} />
-                <Route path="/agents"    element={<AIAgents />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/brief"     element={<Brief />} />
-                <Route path="/alerts"    element={<Alerts />} />
-                <Route path="/archive"   element={<ArchivePage />} />
-                <Route path="/settings"  element={<Settings />} />
+  if (loading) {
+    return <LoadingScreen onComplete={() => {}} />
+  }
 
-              </Routes>
-            </main>
-          </>
-        )}
-        {cmdOpen && <CommandPalette onClose={() => setCmdOpen(false)} />}
-      </div>
-    </BrowserRouter>
+  if (!isAuthenticated) {
+    return <LoginPage />
+  }
+
+  return (
+    <div style={{ position: 'relative', minHeight: '100vh', background: '#0F1015' }}>
+      <Background />
+      {!loaded && <LoadingScreen onComplete={() => setLoaded(true)} />}
+      {loaded && (
+        <>
+          <Sidebar />
+          <main>
+            <Routes>
+              <Route path="/"          element={<Dashboard />} />
+              <Route path="/leads"     element={<Leads />} />
+              <Route path="/upload"    element={<Upload />} />
+              <Route path="/agents"    element={<AIAgents />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/brief"     element={<Brief />} />
+              <Route path="/alerts"    element={<Alerts />} />
+              <Route path="/archive"   element={<ArchivePage />} />
+              <Route path="/settings"  element={<Settings />} />
+            </Routes>
+          </main>
+        </>
+      )}
+      {cmdOpen && <CommandPalette onClose={() => setCmdOpen(false)} />}
+    </div>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </AuthProvider>
   )
 }

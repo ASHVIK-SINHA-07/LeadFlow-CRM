@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react'
 import {
   User, Bell, Flame, Bot, Link2, Database, Command,
-  Eye, EyeOff, Download, Trash2, Mail, Calendar, KeyRound, Brain, TrendingDown, Zap, ShieldAlert, X
+  Eye, EyeOff, Download, Trash2, Mail, Calendar, KeyRound, Brain, TrendingDown, Zap, ShieldAlert, X, LogOut
 } from 'lucide-react'
 import { getLeads, getBackendSettings, saveBackendSettings } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 export default function Settings() {
+  const { user, logout } = useAuth()
+  const displayName = user?.name || 'User'
+  const displayEmail = user?.email || ''
+
   // Profile state
   const [profile, setProfile] = useState(() => {
     const saved = localStorage.getItem('lf_settings_profile')
@@ -195,13 +200,12 @@ export default function Settings() {
 
   return (
     <div style={{ padding: '40px 40px 60px 280px', minHeight: '100vh', position: 'relative', zIndex: 10 }}>
-      <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ maxWidth: 800, margin: '0 auto' }}>
         
         {/* Header */}
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#8F91A2', marginBottom: 8 }}>Preferences</div>
           <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '2.5rem', fontWeight: 700, color: '#F8FAFC', margin: 0 }}>Settings</h1>
-          <p style={{ color: '#8F91A2', fontSize: '0.95rem', marginTop: 6 }}>Manage your profile, workspaces, AI scoring, and integrations</p>
         </div>
 
         {/* 1. Profile Section */}
@@ -212,37 +216,62 @@ export default function Settings() {
           </div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#F8FAFC', marginBottom: 20 }}>Personal Profile</h2>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: '50%',
-              background: 'var(--accent-bg)', border: '1px solid rgba(94, 106, 210, 0.3)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent)'
-            }}>
-              {getInitials(profile.name)}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              <div style={{
+                width: 64, height: 64, borderRadius: '50%',
+                background: 'var(--accent-bg)', border: '1px solid rgba(94, 106, 210, 0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent)'
+              }}>
+                {getInitials(displayName)}
+              </div>
+              <div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 600, color: '#F8FAFC' }}>{displayName}</div>
+                <div style={{ fontSize: '0.85rem', color: '#8F91A2', marginTop: 2 }}>Workspace: {profile.workspace}</div>
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 600, color: '#F8FAFC' }}>{profile.name}</div>
-              <div style={{ fontSize: '0.85rem', color: '#8F91A2', marginTop: 2 }}>Workspace: {profile.workspace}</div>
-            </div>
+
+            <button
+              onClick={logout}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: 'rgba(239, 68, 68, 0.08)',
+                color: '#EF4444',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                borderRadius: 8,
+                padding: '8px 16px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseOver={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'}
+              onMouseOut={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'}
+            >
+              <LogOut size={14} />
+              Logout
+            </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 8 }}>
             <div>
               <label style={{ fontSize: '0.8rem', color: '#8F91A2', display: 'block', marginBottom: 6 }}>Display Name</label>
               <input
-                style={inputStyle}
-                value={profile.name}
-                onChange={e => setProfile({ ...profile, name: e.target.value })}
+                style={{ ...inputStyle, opacity: 0.7, cursor: 'not-allowed' }}
+                value={displayName}
+                disabled
               />
             </div>
             <div>
               <label style={{ fontSize: '0.8rem', color: '#8F91A2', display: 'block', marginBottom: 6 }}>Email Address</label>
               <input
-                style={inputStyle}
+                style={{ ...inputStyle, opacity: 0.7, cursor: 'not-allowed' }}
                 type="email"
-                value={profile.email}
-                onChange={e => setProfile({ ...profile, email: e.target.value })}
+                value={displayEmail}
+                disabled
               />
             </div>
           </div>
@@ -429,31 +458,6 @@ export default function Settings() {
                 }}
               >
                 {integrations.calendarConnected ? 'Disconnect' : 'Connect'}
-              </button>
-            </div>
-          </div>
-
-          {/* LLM Provider API Key */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <KeyRound size={14} style={{ color: '#8F91A2' }} />
-              <label style={{ fontSize: '0.85rem', color: '#C8CAD5', fontWeight: 550 }}>LLM Provider API Key (Gemini/Groq)</label>
-            </div>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showApiKey ? 'text' : 'password'}
-                style={{ ...inputStyle, paddingRight: 40 }}
-                value={integrations.apiKey}
-                onChange={e => setIntegrations({ ...integrations, apiKey: e.target.value })}
-              />
-              <button
-                onClick={() => setShowApiKey(!showApiKey)}
-                style={{
-                  position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', color: '#8F91A2', cursor: 'pointer'
-                }}
-              >
-                {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
