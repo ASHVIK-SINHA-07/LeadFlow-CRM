@@ -308,8 +308,8 @@ app.post("/api/auth/register", async (req, res) => {
       success: true,
       user: { id: newUser.id, name: newUser.name, email: newUser.email },
     });
-  } catch (err) {
-    res.status(500).json({ error: "Registration failed" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Registration failed", message: err.message, stack: err.stack });
   }
 });
 
@@ -340,8 +340,8 @@ app.post("/api/auth/login", async (req, res) => {
       token,
       user: { id: user.id, name: user.name, email: user.email },
     });
-  } catch (err) {
-    res.status(500).json({ error: "Login failed" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Login failed", message: err.message, stack: err.stack });
   }
 });
 
