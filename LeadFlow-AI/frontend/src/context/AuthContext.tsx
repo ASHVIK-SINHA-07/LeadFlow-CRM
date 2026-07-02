@@ -34,7 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Verify token with backend using axios api instance
       api.get('/api/auth/me')
-        .then(data => {
+        .then(res => {
+          const data = res.data
           if (data.success && data.user) {
             setUser(data.user)
             localStorage.setItem('user', JSON.stringify(data.user))
