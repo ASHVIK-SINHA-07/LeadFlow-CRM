@@ -10,6 +10,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/";
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const getLeads = () => api.get("/api/leads").then(r => r.data);
 export const getDashboard = () => api.get("/api/dashboard").then(r => r.data);
 export const analyzeTranscript = (transcript: string) =>

@@ -46,11 +46,17 @@ export default function Dashboard() {
   const handleCreate = async () => {
     if (!form.name || !form.company) return;
     setSaving(true);
-    await createLead({ name: form.name, company: form.company, score: Number(form.score), promises: form.promises });
-    setForm({ name: "", company: "", score: "60", promises: "" });
-    setShowModal(false);
-    setSaving(false);
-    refresh();
+    try {
+      await createLead({ name: form.name, company: form.company, score: Number(form.score), promises: form.promises });
+      setForm({ name: "", company: "", score: "60", promises: "" });
+      setShowModal(false);
+      refresh();
+    } catch (err) {
+      console.error("Failed to create lead:", err);
+      alert("Failed to save lead. Please check your connection or log in again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const priorityQueue = [...leads].sort((a, b) => a.warmthScore - b.warmthScore).slice(0, 5);
