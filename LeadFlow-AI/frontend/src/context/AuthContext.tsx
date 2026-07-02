@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
+import api from '../services/api'
 
 interface User {
   id: number
@@ -31,16 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(storedToken)
       setUser(JSON.parse(storedUser))
 
-      // Verify token with backend
-      fetch('http://localhost:3001/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${storedToken}`
-        }
-      })
-        .then(res => {
-          if (!res.ok) throw new Error('Session invalid')
-          return res.json()
-        })
+      // Verify token with backend using axios api instance
+      api.get('/api/auth/me')
         .then(data => {
           if (data.success && data.user) {
             setUser(data.user)

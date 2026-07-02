@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Sparkles, Mail, Lock, User as UserIcon, Loader } from 'lucide-react'
+import api from '../services/api'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -19,41 +20,27 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
-    const url = activeTab === 'login' 
-      ? 'http://localhost:3001/api/auth/login' 
-      : 'http://localhost:3001/api/auth/register'
+    const path = activeTab === 'login' 
+      ? '/api/auth/login' 
+      : '/api/auth/register'
 
     const body = activeTab === 'login'
       ? { email, password }
       : { name, email, password }
 
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      })
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Authentication failed')
-      }
+      const data = await api.post(path, body).then(r => r.data)
 
       if (activeTab === 'login') {
         login(data.token, data.user)
       } else {
         // After signup, automatically log them in
-        const loginRes = await fetch('http://localhost:3001/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        })
-        const loginData = await loginRes.json()
-        if (!loginRes.ok) throw new Error(loginData.error || 'Autologin failed')
+        const loginData = await api.post('/api/auth/login', { email, password }).then(r => r.data)
         login(loginData.token, loginData.user)
       }
     } catch (err: any) {
-      setError(err.message || 'Something went wrong. Please try again.')
+      const msg = err.response?.data?.error || err.message || 'Something went wrong. Please try again.'
+      setError(msg)
     } finally {
       setLoading(false)
     }
