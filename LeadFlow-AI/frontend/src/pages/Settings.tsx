@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   User, Bell, Flame, Bot, Link2, Database, Command,
-  Eye, EyeOff, Download, Trash2, Mail, Calendar, KeyRound, Brain, TrendingDown, Zap, ShieldAlert, X, LogOut
+  Download, Trash2, Mail, Calendar, Brain, TrendingDown, Zap, ShieldAlert, X, LogOut
 } from 'lucide-react'
 import { getLeads, getBackendSettings, saveBackendSettings } from '../services/api'
 import { useAuth } from '../context/AuthContext'
@@ -12,7 +12,7 @@ export default function Settings() {
   const displayEmail = user?.email || ''
 
   // Profile state
-  const [profile, setProfile] = useState(() => {
+  const [profile] = useState(() => {
     const saved = localStorage.getItem('lf_settings_profile')
     return saved ? JSON.parse(saved) : { name: 'Priya Menon', email: 'priya@flipkart.com', workspace: 'LeadFlow' }
   })
@@ -42,7 +42,6 @@ export default function Settings() {
   })
 
   // UI state
-  const [showApiKey, setShowApiKey] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [clearingArchive, setClearingArchive] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
