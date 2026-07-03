@@ -52,6 +52,7 @@ interface User {
 
 interface Lead {
   id: number;
+  userId?: number; // Owner of the lead
   name: string;
   company: string;
   baseScore: number;
@@ -100,7 +101,19 @@ function loadLeads(): Lead[] {
   try {
     if (fs.existsSync(DATA_FILE)) {
       const raw = fs.readFileSync(DATA_FILE, "utf-8");
-      return JSON.parse(raw) as Lead[];
+      const parsed = JSON.parse(raw) as Lead[];
+      // Migrate legacy leads to user 1
+      let migrated = false;
+      parsed.forEach((l) => {
+        if (l.userId === undefined) {
+          l.userId = 1;
+          migrated = true;
+        }
+      });
+      if (migrated) {
+        fs.writeFileSync(DATA_FILE, JSON.stringify(parsed, null, 2), "utf-8");
+      }
+      return parsed;
     }
   } catch (err) {
     console.warn("⚠️  Could not read leads.json:", err);
@@ -406,8 +419,8 @@ app.post("/api/settings", (req, res) => {
 });
 
 // GET all leads with live warmth scores
-app.get("/api/leads", (req, res) => {
-  const activeLeads = leads.filter(l => !l.closedAt);
+app.get("/api/leads", (req: any, res) => {
+  const activeLeads = leads.filter(l => l.userId === req.userId && !l.closedAt);
   const enriched = activeLeads.map((lead) => {
     const warmthScore = getWarmthScore(lead);
     return {
@@ -430,8 +443,9 @@ app.get("/api/leads", (req, res) => {
 });
 
 // GET dashboard stats
-app.get("/api/dashboard", (req, res) => {
-  const activeLeads = leads.filter(l => !l.closedAt);
+app.get("/api/dashboard", (req: any, res) => {
+  const userLeads = leads.filter(l => l.userId === req.userId);
+  const activeLeads = userLeads.filter(l => !l.closedAt);
   const enriched = activeLeads.map((l) => ({
     ...l,
     warmthScore: getWarmthScore(l),
@@ -439,7 +453,7 @@ app.get("/api/dashboard", (req, res) => {
   }));
 
   res.json({
-    total: leads.length,
+    total: userLeads.length,
     hot: enriched.filter((l) => l.warmthScore >= 70).length,
     warm: enriched.filter((l) => l.warmthScore >= 40 && l.warmthScore < 70).length,
     cold: enriched.filter((l) => l.warmthScore < 40).length,
@@ -449,7 +463,7 @@ app.get("/api/dashboard", (req, res) => {
 });
 
 // POST analyze transcript → extract lead info + promises
-app.post("/api/analyze", async (req, res) => {
+app.post("/api/analyze", async (req: any, res) => {
   const { transcript } = req.body;
   if (!transcript) return res.status(400).json({ error: "No transcript" });
 
@@ -482,6 +496,7 @@ ${transcript}
     // Add to leads database
     const newLead: Lead = {
       id: nextId(),
+      userId: req.userId,
       name: parsed.name,
       company: parsed.company,
       baseScore: parsed.score,
@@ -501,8 +516,8 @@ ${transcript}
 });
 
 // POST generate 1-click follow-up draft
-app.post("/api/draft-followup/:id", async (req, res) => {
-  const lead = leads.find((l) => l.id === Number(req.params.id));
+app.post("/api/draft-followup/:id", async (req: any, res) => {
+  const lead = leads.find((l) => l.id === Number(req.params.id) && l.userId === req.userId);
   if (!lead) return res.status(404).json({ error: "Lead not found" });
 
   const warmthScore = getWarmthScore(lead);
@@ -532,8 +547,8 @@ Keep it human, not salesy. Reference the specific promises made.
 });
 
 // POST add conversation note to existing lead
-app.post("/api/leads/:id/note", (req, res) => {
-  const lead = leads.find((l) => l.id === Number(req.params.id));
+app.post("/api/leads/:id/note", (req: any, res) => {
+  const lead = leads.find((l) => l.id === Number(req.params.id) && l.userId === req.userId);
   if (!lead) return res.status(404).json({ error: "Lead not found" });
 
   const { note, newPromises } = req.body;
@@ -551,8 +566,8 @@ app.post("/api/leads/:id/note", (req, res) => {
 });
 
 // POST mark promise as done
-app.post("/api/leads/:id/promise-done", (req, res) => {
-  const lead = leads.find((l) => l.id === Number(req.params.id));
+app.post("/api/leads/:id/promise-done", (req: any, res) => {
+  const lead = leads.find((l) => l.id === Number(req.params.id) && l.userId === req.userId);
   if (!lead) return res.status(404).json({ error: "Lead not found" });
 
   const { promise } = req.body;
@@ -561,7 +576,7 @@ app.post("/api/leads/:id/promise-done", (req, res) => {
   res.json({ success: true });
 });
 // Manual lead creation
-app.post("/api/leads", (req, res) => {
+app.post("/api/leads", (req: any, res) => {
   const { name, company, score, status, promises } = req.body;
 
   if (!name || typeof name !== "string" || name.trim() === "") {
@@ -573,6 +588,7 @@ app.post("/api/leads", (req, res) => {
 
   const newLead: Lead = {
     id: nextId(),
+    userId: req.userId,
     name: name.trim(),
     company: company.trim(),
     baseScore: score || 60,
@@ -586,8 +602,8 @@ app.post("/api/leads", (req, res) => {
   res.json(newLead);
 });
 // Close a deal
-app.post("/api/leads/:id/close", async (req, res) => {
-  const lead = leads.find((l) => l.id === Number(req.params.id));
+app.post("/api/leads/:id/close", async (req: any, res) => {
+  const lead = leads.find((l) => l.id === Number(req.params.id) && l.userId === req.userId);
   if (!lead) return res.status(404).json({ error: "Lead not found" });
 
   const { outcome, closeReason } = req.body;
@@ -621,9 +637,9 @@ Keep each tag under 3 words, lowercase.`);
 });
 
 // Get all closed deals
-app.get("/api/archive", (req, res) => {
+app.get("/api/archive", (req: any, res) => {
   const closed = leads
-    .filter((l) => l.closedAt)
+    .filter((l) => l.userId === req.userId && l.closedAt)
     .map((l) => ({
       ...l,
       warmthScore: getWarmthScore(l),
@@ -646,8 +662,8 @@ app.post("/api/chat", async (req, res) => {
 });
 
 // Get win/loss stats
-app.get("/api/archive/stats", (req, res) => {
-  const closed = leads.filter((l) => l.closedAt);
+app.get("/api/archive/stats", (req: any, res) => {
+  const closed = leads.filter((l) => l.userId === req.userId && l.closedAt);
   const won = closed.filter((l) => l.outcome === "won");
   const lost = closed.filter((l) => l.outcome === "lost");
   const ghosted = closed.filter((l) => l.outcome === "ghosted");
@@ -673,8 +689,8 @@ app.get("/api/archive/stats", (req, res) => {
   });
 });
 // What did I promise? Memory recall
-app.post("/api/leads/:id/recall-promises", async (req, res) => {
-  const lead = leads.find((l) => l.id === Number(req.params.id));
+app.post("/api/leads/:id/recall-promises", async (req: any, res) => {
+  const lead = leads.find((l) => l.id === Number(req.params.id) && l.userId === req.userId);
   if (!lead) return res.status(404).json({ error: "Lead not found" });
 
   const warmthScore = getWarmthScore(lead);
@@ -715,18 +731,25 @@ Rules:
     res.json({ leadName: lead.name, company: lead.company, daysSince, warmthScore, ...parsed });
   } catch {
     res.json({
-      leadName: lead.name, company: lead.company, daysSince, warmthScore,
-      promises: lead.promises.map(p => ({
-        text: p, source: "explicit", urgency: "medium", status: "open",
+      leadName: lead.name,
+      company: lead.company,
+      daysSince,
+      warmthScore,
+      promises: lead.promises.map((p) => ({
+        text: p,
+        source: "explicit",
+        urgency: "medium",
+        status: "open",
       })),
       summary: `${lead.name} from ${lead.company}. ${lead.promises.length} open promise(s).`,
     });
   }
 });
+
 // Cold alert digest
-app.get("/api/alerts", async (req, res) => {
+app.get("/api/alerts", async (req: any, res) => {
   const enriched = leads
-    .filter((l) => !l.closedAt)
+    .filter((l) => l.userId === req.userId && !l.closedAt)
     .map((l) => ({
       ...l,
       warmthScore: getWarmthScore(l),
@@ -770,8 +793,8 @@ Rules: reference specific promise or last note, be direct and action-oriented.`)
 });
 
 // Draft re-engagement message
-app.post("/api/alerts/:id/draft-reengagement", async (req, res) => {
-  const lead = leads.find((l) => l.id === Number(req.params.id));
+app.post("/api/alerts/:id/draft-reengagement", async (req: any, res) => {
+  const lead = leads.find((l) => l.id === Number(req.params.id) && l.userId === req.userId);
   if (!lead) return res.status(404).json({ error: "Lead not found" });
 
   const warmthScore = getWarmthScore(lead);
@@ -794,9 +817,10 @@ Write 2-3 sentences. Subject line first, then body. Human and warm, not pushy. R
     });
   }
 });
+
 // Pre-call briefing
-app.post("/api/leads/:id/pre-call-brief", async (req, res) => {
-  const lead = leads.find((l) => l.id === Number(req.params.id));
+app.post("/api/leads/:id/pre-call-brief", async (req: any, res) => {
+  const lead = leads.find((l) => l.id === Number(req.params.id) && l.userId === req.userId);
   if (!lead) return res.status(404).json({ error: "Lead not found" });
 
   const warmthScore = getWarmthScore(lead);
@@ -841,9 +865,10 @@ Rules: suggestedOpener must reference a specific detail. talkingPoints exactly 3
     });
   }
 });
+
 // Reopen a closed deal
-app.post("/api/leads/:id/reopen", (req, res) => {
-  const lead = leads.find((l) => l.id === Number(req.params.id));
+app.post("/api/leads/:id/reopen", (req: any, res) => {
+  const lead = leads.find((l) => l.id === Number(req.params.id) && l.userId === req.userId);
   if (!lead) return res.status(404).json({ error: "Lead not found" });
 
   lead.closedAt = undefined;
@@ -858,12 +883,12 @@ app.post("/api/leads/:id/reopen", (req, res) => {
   res.json({ success: true, lead });
 });
 // Natural language lead search
-app.post("/api/search", async (req, res) => {
+app.post("/api/search", async (req: any, res) => {
   const { query } = req.body;
   if (!query) return res.status(400).json({ error: "No query" });
 
   const active = leads
-    .filter((l) => !l.closedAt)
+    .filter((l) => l.userId === req.userId && !l.closedAt)
     .map((l) => ({
       id: l.id, name: l.name, company: l.company,
       warmthScore: getWarmthScore(l),
@@ -903,7 +928,8 @@ Rules:
     res.json({ results, explanation: `Found ${results.length} lead(s) matching "${query}"`, query });
   }
 });
-app.delete("/api/reset", (req, res) => {
+
+app.delete("/api/reset", (req: any, res) => {
   const secret = req.query.secret;
   const expectedSecret = process.env.RESET_SECRET;
 
@@ -911,9 +937,10 @@ app.delete("/api/reset", (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  leads = [];
+  // Multi-tenant reset: only reset the authenticated user's leads
+  leads = leads.filter((l) => l.userId !== req.userId);
   saveLeads(leads);
-  res.json({ message: "Leads database reset successfully" });
+  res.json({ message: "User leads reset successfully" });
 });
 
 const PORT = process.env.PORT || 3001;
