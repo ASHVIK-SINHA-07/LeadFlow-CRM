@@ -345,6 +345,34 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+app.post("/api/auth/reset-password", async (req, res) => {
+  const { email, name, newPassword } = req.body;
+  if (!email || !name || !newPassword) {
+    return res.status(400).json({ error: "Missing email, name, or new password" });
+  }
+
+  users = loadUsers();
+  const userIndex = users.findIndex(
+    (u) =>
+      u.email.toLowerCase() === email.toLowerCase() &&
+      u.name.toLowerCase() === name.toLowerCase()
+  );
+
+  if (userIndex === -1) {
+    return res.status(400).json({ error: "Verification failed. Incorrect email or name." });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    users[userIndex].password = hashedPassword;
+    saveUsers(users);
+
+    res.json({ success: true, message: "Password reset successfully!" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Reset failed", message: err.message, stack: err.stack });
+  }
+});
+
 app.get("/api/auth/me", requireAuth, (req: any, res) => {
   res.json({ success: true, user: { id: req.user.id, name: req.user.name, email: req.user.email } });
 });

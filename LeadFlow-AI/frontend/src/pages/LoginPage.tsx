@@ -5,7 +5,7 @@ import api from '../services/api'
 
 export default function LoginPage() {
   const { login } = useAuth()
-  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login')
+  const [activeTab, setActiveTab] = useState<'login' | 'signup' | 'forgot'>('login')
   
   // Form fields
   const [name, setName] = useState('')
@@ -14,11 +14,29 @@ export default function LoginPage() {
   
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setSuccessMsg('')
     setLoading(true)
+
+    if (activeTab === 'forgot') {
+      try {
+        const data = await api.post('/api/auth/reset-password', { email, name, newPassword: password }).then(r => r.data)
+        setSuccessMsg(data.message || 'Password reset successfully!')
+        setActiveTab('login')
+        setPassword('')
+        setName('')
+      } catch (err: any) {
+        const msg = err.response?.data?.error || err.message || 'Reset failed. Please try again.'
+        setError(msg)
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
 
     const path = activeTab === 'login' 
       ? '/api/auth/login' 
@@ -106,49 +124,57 @@ export default function LoginPage() {
           <h2 style={{
             fontFamily: 'Space Grotesk, sans-serif', fontSize: '1.75rem', fontWeight: 700,
             color: '#F8FAFC', margin: '0 0 6px 0'
-          }}>LeadFlow AI</h2>
-          <p style={{ fontSize: '0.85rem', color: '#8F91A2', margin: 0 }}>
-            Autonomous CRM & Sales Chief of Staff
+          }}>
+            {activeTab === 'forgot' ? 'Reset Password' : 'LeadFlow AI'}
+          </h2>
+          <p style={{ fontSize: '0.85rem', color: '#8F91A2', margin: 0, lineHeight: 1.4 }}>
+            {activeTab === 'forgot' 
+              ? 'Verify your registered email and full name to set a new password.'
+              : 'Autonomous CRM & Sales Chief of Staff'}
           </p>
         </div>
 
-        {/* Tabs */}
-        <div style={{
-          display: 'flex',
-          background: '#0F1015',
-          padding: 4,
-          borderRadius: 8,
-          marginBottom: 24,
-        }}>
-          {(['login', 'signup'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => { setActiveTab(tab); setError('') }}
-              style={{
-                flex: 1,
-                padding: '8px 0',
-                border: 'none',
-                background: activeTab === tab ? '#171821' : 'none',
-                color: activeTab === tab ? '#F8FAFC' : '#8F91A2',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                borderRadius: 6,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              {tab === 'login' ? 'Sign In' : 'Register'}
-            </button>
-          ))}
-        </div>
+        {/* Tabs (Hidden in Reset Mode) */}
+        {activeTab !== 'forgot' ? (
+          <div style={{
+            display: 'flex',
+            background: '#0F1015',
+            padding: 4,
+            borderRadius: 8,
+            marginBottom: 24,
+          }}>
+            {(['login', 'signup'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => { setActiveTab(tab); setError(''); setSuccessMsg(''); }}
+                style={{
+                  flex: 1,
+                  padding: '8px 0',
+                  border: 'none',
+                  background: activeTab === tab ? '#171821' : 'none',
+                  color: activeTab === tab ? '#F8FAFC' : '#8F91A2',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {tab === 'login' ? 'Sign In' : 'Register'}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           
-          {/* Name Field (Sign Up Only) */}
-          {activeTab === 'signup' && (
+          {/* Name Field (Sign Up & Forgot Mode Only) */}
+          {activeTab !== 'login' && (
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#8F91A2', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>Full Name</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#8F91A2', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>
+                {activeTab === 'forgot' ? 'Full Name (for verification)' : 'Full Name'}
+              </label>
               <div style={{ position: 'relative' }}>
                 <UserIcon size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#52525B' }} />
                 <input
@@ -185,7 +211,9 @@ export default function LoginPage() {
 
           {/* Password Field */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#8F91A2', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>Password</label>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#8F91A2', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>
+              {activeTab === 'forgot' ? 'New Password' : 'Password'}
+            </label>
             <div style={{ position: 'relative' }}>
               <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#52525B' }} />
               <input
@@ -199,7 +227,33 @@ export default function LoginPage() {
                 onBlur={e => e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)'}
               />
             </div>
+            {activeTab === 'login' && (
+              <div style={{ textAlign: 'right', marginTop: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('forgot'); setError(''); setSuccessMsg(''); }}
+                  style={{ background: 'none', border: 'none', color: '#8F91A2', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Success Message */}
+          {successMsg && (
+            <div style={{
+              fontSize: '0.8rem',
+              color: '#22C55E',
+              background: 'rgba(34, 197, 94, 0.08)',
+              border: '1px solid rgba(34, 197, 94, 0.15)',
+              padding: '10px 14px',
+              borderRadius: 6,
+              lineHeight: 1.4
+            }}>
+              {successMsg}
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (
@@ -247,9 +301,22 @@ export default function LoginPage() {
                 Processing...
               </>
             ) : (
-              activeTab === 'login' ? 'Sign In' : 'Create Account'
+              activeTab === 'login' ? 'Sign In' : activeTab === 'signup' ? 'Create Account' : 'Reset Password'
             )}
           </button>
+
+          {/* Back to Sign In Link (Forgot Mode Only) */}
+          {activeTab === 'forgot' && (
+            <div style={{ textAlign: 'center', marginTop: 10 }}>
+              <button
+                type="button"
+                onClick={() => { setActiveTab('login'); setError(''); setSuccessMsg(''); }}
+                style={{ background: 'none', border: 'none', color: '#5E6AD2', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Back to Sign In
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>
